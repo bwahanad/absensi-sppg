@@ -96,7 +96,7 @@ function login(){
 
 async function loadAll(isLogin){
   try{
-    const d=await jsonp(SCRIPT_URL+"?action=listLokasi&pass="+encodeURIComponent(SUPER_PASS));
+    const d=await jsonp(API_URL+"?action=listLokasi&pass="+encodeURIComponent(SUPER_PASS));
     if(d.status!=="ok"){
       if(isLogin){document.getElementById("login-err").style.display="block";}
       return;
@@ -153,7 +153,7 @@ function tombolAksi(l){
 async function aksi(action,id){
   if(!confirm("Yakin lanjutkan aksi ini?"))return;
   try{
-    const d=await jsonp(SCRIPT_URL+"?action="+action+"&id="+encodeURIComponent(id)+"&pass="+encodeURIComponent(SUPER_PASS));
+    const d=await jsonp(API_URL+"?action="+action+"&id="+encodeURIComponent(id)+"&pass="+encodeURIComponent(SUPER_PASS));
     if(d.status==="ok") loadAll(); else alert(d.message||"Gagal");
   }catch(e){alert("Gagal terhubung ke server");}
 }
