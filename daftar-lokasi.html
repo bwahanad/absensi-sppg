@@ -109,7 +109,7 @@ async function daftar(){
   document.getElementById("btn-submit").disabled=true;
   showResult("⏳ Mengirim pendaftaran...","ok");
   try{
-    const url=SCRIPT_URL+"?action=registerLokasi"
+    const url=API_URL+"?action=registerLokasi"
       +"&namaAdmin="+encodeURIComponent(namaAdmin)
       +"&nomorHp="+encodeURIComponent(nomorHp)
       +"&namaLokasi="+encodeURIComponent(namaLokasi)
