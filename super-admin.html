@@ -64,13 +64,14 @@ body{font-family:sans-serif;background:#f5f5f5;min-height:100vh}
       <button class="tab" onclick="switchTab('Approved',this)">✅ Aktif</button>
       <button class="tab" onclick="switchTab('Suspended',this)">⛔ Suspended</button>
       <button class="tab" onclick="switchTab('Rejected',this)">❌ Ditolak</button>
+      <button class="tab" onclick="switchTab('Usulan',this)">📌 Usulan Perbaikan</button>
     </div>
     <div id="list-wrap"><div class="empty">⏳ Memuat...</div></div>
   </div>
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbzAnBeh8FczfWIAWjzt6xaSUOf2YP2R3dYt0nvpEgSVCAIJgpUjGGgtXKUDxDS1a9w/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbznX4I5u1XxiXaNwmrVoVH1u2pVLDTGhoilKBbjl-1Yoa9Q_ZNIn12NxweHPUGObsMKqg/exec";
 
 // JSONP: menghindari error CORS dari Google Apps Script
 function jsonp(url){
@@ -86,6 +87,7 @@ function jsonp(url){
 }
 let SUPER_PASS = "";
 let allLokasi = [];
+let usulanList = [];
 let activeTab = "Pending";
 
 function login(){
@@ -96,12 +98,14 @@ function login(){
 
 async function loadAll(isLogin){
   try{
-    const d=await jsonp(API_URL+"?action=listLokasi&pass="+encodeURIComponent(SUPER_PASS));
+    const d=await jsonp(SCRIPT_URL+"?action=listLokasi&pass="+encodeURIComponent(SUPER_PASS));
     if(d.status!=="ok"){
       if(isLogin){document.getElementById("login-err").style.display="block";}
       return;
     }
     allLokasi=d.data||[];
+    const du=await jsonp(SCRIPT_URL+"?action=listUsulanPerbaikan&pass="+encodeURIComponent(SUPER_PASS));
+    usulanList=du.status==="ok"?(du.data||[]):[];
     document.getElementById("login-page").style.display="none";
     document.getElementById("dash-page").style.display="block";
     render();
@@ -119,6 +123,7 @@ function switchTab(status,el){
 
 function render(){
   const wrap=document.getElementById("list-wrap");
+  if(activeTab==="Usulan"){ renderUsulan(wrap); return; }
   const list=allLokasi.filter(l=>l.Status===activeTab);
   if(!list.length){wrap.innerHTML='<div class="empty">Tidak ada lokasi berstatus '+activeTab+'</div>';return;}
   let html="";
@@ -131,6 +136,24 @@ function render(){
       <div class="info-line"><span>Sheet</span><b><a href="${l.SheetURL}" target="_blank">Buka Sheet</a></b></div>
       <div class="info-line"><span>Terdaftar</span><b>${new Date(l.TanggalDaftar).toLocaleString('id-ID')}</b></div>
       <div class="btns">${tombolAksi(l)}</div>
+    </div>`;
+  });
+  wrap.innerHTML=html;
+}
+
+function renderUsulan(wrap){
+  if(!usulanList.length){wrap.innerHTML='<div class="empty">Tidak ada usulan perbaikan lokasi</div>';return;}
+  let html="";
+  usulanList.forEach(l=>{
+    html+=`<div class="card">
+      <div class="card-title">${l.NamaLokasi} <span class="badge Pending">Usulan Baru</span></div>
+      <div class="card-sub">Admin: ${l.NamaAdmin} • ${l.NomorHP}</div>
+      <div class="info-line"><span>Koordinat lama</span><b>${parseFloat(l.Lat).toFixed(6)}, ${parseFloat(l.Lng).toFixed(6)}</b></div>
+      <div class="info-line"><span>Koordinat usulan</span><b style="color:#0F6E56">${parseFloat(l.LatUsulan).toFixed(6)}, ${parseFloat(l.LngUsulan).toFixed(6)}</b></div>
+      <div class="btns">
+        <button class="btn approve" onclick="aksi('setujuiPerbaikanLokasi','${l.ID}')">✅ Setujui</button>
+        <button class="btn reject" onclick="aksi('tolakPerbaikanLokasi','${l.ID}')">❌ Tolak</button>
+      </div>
     </div>`;
   });
   wrap.innerHTML=html;
@@ -153,7 +176,7 @@ function tombolAksi(l){
 async function aksi(action,id){
   if(!confirm("Yakin lanjutkan aksi ini?"))return;
   try{
-    const d=await jsonp(API_URL+"?action="+action+"&id="+encodeURIComponent(id)+"&pass="+encodeURIComponent(SUPER_PASS));
+    const d=await jsonp(SCRIPT_URL+"?action="+action+"&id="+encodeURIComponent(id)+"&pass="+encodeURIComponent(SUPER_PASS));
     if(d.status==="ok") loadAll(); else alert(d.message||"Gagal");
   }catch(e){alert("Gagal terhubung ke server");}
 }
