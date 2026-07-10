@@ -49,6 +49,16 @@ input[type=email]:focus{border-color:#1D9E75}
 .btn-d{background:#1D9E75;color:#fff;padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;width:100%}
 .btn-p{background:#E24B4A;color:#fff;padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;width:100%}
 .btn-ganti{background:none;border:none;font-size:11px;color:#aaa;cursor:pointer;margin-top:10px;display:none;width:100%;text-align:center}
+.btn-tim{background:#F0F7FF;border:1.5px solid #D3E8FF;color:#0C447C;padding:9px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;margin-top:8px;width:100%}
+.tim-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid #f2f2f2;font-size:12px}
+.tim-row:last-child{border-bottom:none}
+#tim-wrap{background:#fafafa;border-radius:10px;margin-top:8px;max-height:260px;overflow-y:auto}
+.tim-nama{font-weight:600;color:#222}
+.tim-bagian{font-size:10px;color:#999}
+.tim-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}
+.tim-status.kerja{background:#E1F5EE;color:#085041}
+.tim-status.pulang{background:#E6F1FB;color:#0C447C}
+.tim-status.belum{background:#FCEBEB;color:#A32D2D}
 .result{margin-top:14px;padding:12px 16px;border-radius:10px;font-size:13px;text-align:center;display:none;line-height:1.7;white-space:pre-line}
 .result.ok{background:#E1F5EE;color:#085041}
 .result.warn{background:#FAEEDA;color:#854F0B}
@@ -154,6 +164,8 @@ tr:last-child td{border-bottom:none}
         <button class="btn-d" onclick="absen('datang')">✅ Datang</button>
         <button class="btn-p" onclick="absen('pulang')">🚪 Pulang</button>
       </div>
+      <button class="btn-tim" id="btn-tim" onclick="toggleTim()" style="display:none">👥 Lihat siapa yang sedang bekerja</button>
+      <div id="tim-wrap" style="display:none"></div>
       <button class="btn-ganti" id="btn-ganti" onclick="gantiAkun()">Bukan kamu? Ganti akun</button>
       <div class="result" id="result"></div>
     </div>
@@ -182,6 +194,7 @@ tr:last-child td{border-bottom:none}
     <label>Nama</label><input type="text" id="edit-nama">
     <label>Email</label><input type="email" id="edit-email">
     <label>Bagian</label><input type="text" id="edit-bagian">
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-top:4px"><input type="checkbox" id="edit-akses" style="width:auto"> Boleh lihat status tim (👥 read-only)</label>
     <input type="hidden" id="edit-oldemail">
     <div class="modal-btns">
       <button class="btn-ok" onclick="simpanEdit()">Simpan</button>
@@ -210,7 +223,7 @@ tr:last-child td{border-bottom:none}
         <button class="rbtn" onclick="loadAbsensi()">🔄 Refresh</button>
       </div>
       <div class="stat-grid">
-        <div class="stat-box green"><div class="stat-num green" id="s-datang">0</div><div class="stat-label">Datang</div></div>
+        <div class="stat-box green"><div class="stat-num green" id="s-datang">0</div><div class="stat-label">Bekerja</div></div>
         <div class="stat-box amber"><div class="stat-num amber" id="s-pulang">0</div><div class="stat-label">Pulang</div></div>
         <div class="stat-box red"><div class="stat-num red" id="s-belum">0</div><div class="stat-label">Belum</div></div>
       </div>
@@ -218,7 +231,7 @@ tr:last-child td{border-bottom:none}
     <div class="acard">
       <div class="ftabs">
         <button class="ftab all active" onclick="filterM('all',this)">Semua</button>
-        <button class="ftab datang" onclick="filterM('datang',this)">✅ Datang</button>
+        <button class="ftab datang" onclick="filterM('datang',this)">🟢 Bekerja</button>
         <button class="ftab pulang" onclick="filterM('pulang',this)">🏁 Pulang</button>
         <button class="ftab belum" onclick="filterM('belum',this)">❌ Belum</button>
       </div>
@@ -233,6 +246,7 @@ tr:last-child td{border-bottom:none}
       <label>Nama</label><input class="ainput" type="text" id="inp-nama" placeholder="Ahmad Fauzi">
       <label>Email</label><input class="ainput" type="email" id="inp-email" placeholder="ahmad@gmail.com">
       <label>Bagian</label><input class="ainput" type="text" id="inp-bagian" placeholder="Persiapan / Masak / Distribusi">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:8px"><input type="checkbox" id="inp-akses" style="width:auto"> Boleh lihat status tim (👥 read-only)</label>
       <div class="rowbtn">
         <button class="abtn primary" onclick="tambah()">Simpan</button>
         <button class="abtn" style="background:#f0f0f0;color:#555" onclick="resetForm()">Reset</button>
@@ -274,7 +288,7 @@ tr:last-child td{border-bottom:none}
 
 <script>
 // GANTI URL INI dengan Web App URL Apps Script Master Sheet
-const API_URL = "https://script.google.com/macros/s/AKfycbzAnBeh8FczfWIAWjzt6xaSUOf2YP2R3dYt0nvpEgSVCAIJgpUjGGgtXKUDxDS1a9w/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbznX4I5u1XxiXaNwmrVoVH1u2pVLDTGhoilKBbjl-1Yoa9Q_ZNIn12NxweHPUGObsMKqg/exec";
 
 // JSONP: menghindari error CORS dari Google Apps Script
 function jsonp(url){
@@ -341,7 +355,7 @@ function deteksiLokasi(){
   navigator.geolocation.getCurrentPosition(async pos=>{
     userLat=pos.coords.latitude;userLng=pos.coords.longitude;
     try{
-      const d=await jsonp(API_URL+"?action=findLokasiByGPS&lat="+userLat+"&lng="+userLng);
+      const d=await jsonp(SCRIPT_URL+"?action=findLokasiByGPS&lat="+userLat+"&lng="+userLng);
       if(d.status==="ok"){
         lokasi=d.lokasi;
         document.getElementById("lokasi-label").textContent=lokasi.NamaLokasi;
@@ -363,8 +377,8 @@ function deteksiLokasi(){
 deteksiLokasi();
 
 async function autoRestore(email){
-  try{const d=await jsonp(API_URL+"?action=cek&sheetId="+lokasi.SheetID+"&email="+encodeURIComponent(email));
-    if(d.status==="ok"){userName=d.nama;userBagian=d.bagian;tampilUser(email,d.nama,d.bagian);}
+  try{const d=await jsonp(SCRIPT_URL+"?action=cek&sheetId="+lokasi.SheetID+"&email="+encodeURIComponent(email));
+    if(d.status==="ok"){userName=d.nama;userBagian=d.bagian;tampilUser(email,d.nama,d.bagian,d.aksesMonitor);}
     else{localStorage.removeItem("absen_email");userEmail="";}
   }catch(e){}
 }
@@ -375,14 +389,14 @@ async function verif(){
   if(!email||!email.includes("@")){showRes("Masukkan email yang valid","err");return;}
   showRes("⏳ Memverifikasi...","warn");
   document.querySelector(".card").classList.add("loading");
-  try{const d=await jsonp(API_URL+"?action=cek&sheetId="+lokasi.SheetID+"&email="+encodeURIComponent(email));
-    if(d.status==="ok"){userEmail=email;userName=d.nama;userBagian=d.bagian;localStorage.setItem("absen_email",email);tampilUser(email,d.nama,d.bagian);document.getElementById("result").style.display="none";}
+  try{const d=await jsonp(SCRIPT_URL+"?action=cek&sheetId="+lokasi.SheetID+"&email="+encodeURIComponent(email));
+    if(d.status==="ok"){userEmail=email;userName=d.nama;userBagian=d.bagian;localStorage.setItem("absen_email",email);tampilUser(email,d.nama,d.bagian,d.aksesMonitor);document.getElementById("result").style.display="none";}
     else showRes("❌ Email tidak terdaftar di lokasi ini.\nHubungi admin lokasi.","err");
   }catch(e){showRes("Gagal terhubung ke server","err");}
   document.querySelector(".card").classList.remove("loading");
 }
 
-function tampilUser(email,nama,bagian){
+function tampilUser(email,nama,bagian,aksesMonitor){
   document.getElementById("u-nama").textContent="👤 "+nama;
   document.getElementById("u-email").textContent=email;
   document.getElementById("u-bagian").textContent=bagian?"🏷️ "+bagian:"";
@@ -390,6 +404,7 @@ function tampilUser(email,nama,bagian){
   document.getElementById("form-area").style.display="none";
   document.getElementById("absen-btns").style.display="grid";
   document.getElementById("btn-ganti").style.display="block";
+  document.getElementById("btn-tim").style.display=aksesMonitor?"block":"none";
 }
 function gantiAkun(){
   localStorage.removeItem("absen_email");userEmail="";userName="";userBagian="";
@@ -397,6 +412,9 @@ function gantiAkun(){
   document.getElementById("form-area").style.display="block";
   document.getElementById("absen-btns").style.display="none";
   document.getElementById("btn-ganti").style.display="none";
+  document.getElementById("btn-tim").style.display="none";
+  document.getElementById("tim-wrap").style.display="none";
+  timTerbuka=false;
   document.getElementById("inp-gmail").value="";
   document.getElementById("result").style.display="none";
 }
@@ -409,7 +427,7 @@ async function absen(jenis){
   if(jarak>lokasi.Radius){showRes("❌ Kamu berada "+Math.round(jarak)+"m dari lokasi.\nMaksimal "+lokasi.Radius+"m.","err");return;}
   document.querySelector(".card").classList.add("loading");
   try{
-    const url=API_URL+"?action=absen&sheetId="+lokasi.SheetID+"&email="+encodeURIComponent(userEmail)+"&jenis="+jenis+"&lat="+userLat+"&lng="+userLng;
+    const url=SCRIPT_URL+"?action=absen&sheetId="+lokasi.SheetID+"&email="+encodeURIComponent(userEmail)+"&jenis="+jenis+"&lat="+userLat+"&lng="+userLng;
     const d=await jsonp(url);
     if(d.status==="ok"&&jenis==="datang") showRes("✅ "+d.nama+"\nJam datang: "+d.jam,"ok");
     else if(d.status==="ok"&&jenis==="pulang") showRes("🏁 "+d.nama+"\nJam pulang: "+d.jam+"\nLama kerja: "+(d.lamaKerja||"—"),"ok");
@@ -418,6 +436,33 @@ async function absen(jenis){
   document.querySelector(".card").classList.remove("loading");
 }
 function showRes(msg,type){const el=document.getElementById("result");el.textContent=msg;el.className="result "+type;el.style.display="block";}
+
+let timTerbuka=false;
+async function toggleTim(){
+  const wrap=document.getElementById("tim-wrap");
+  if(timTerbuka){ wrap.style.display="none"; document.getElementById("btn-tim").textContent="👥 Lihat siapa yang sedang bekerja"; timTerbuka=false; return; }
+  wrap.style.display="block"; wrap.innerHTML='<div style="text-align:center;color:#aaa;font-size:12px;padding:10px">⏳ Memuat...</div>';
+  document.getElementById("btn-tim").textContent="👥 Sembunyikan daftar tim";
+  timTerbuka=true;
+  try{
+    const [da,dk]=await Promise.all([
+      jsonp(SCRIPT_URL+"?action=getAbsensi&sheetId="+lokasi.SheetID),
+      jsonp(SCRIPT_URL+"?action=listKaryawan&sheetId="+lokasi.SheetID)
+    ]);
+    const n=jamSekarang();
+    const today=n.getDate().toString().padStart(2,"0")+"/"+(n.getMonth()+1).toString().padStart(2,"0")+"/"+n.getFullYear();
+    const map={};(da.data||[]).filter(a=>a.Tanggal===today).forEach(a=>{map[(a.Email||"").toLowerCase()]={jamDatang:a.JamDatang,jamPulang:a.JamPulang,lamaKerja:a.LamaKerja};});
+    let list=(dk.data||[]).map(k=>{const ab=map[(k.Email||"").toLowerCase()];return{nama:k.Nama,bagian:k.Bagian||"",jamDatang:ab?ab.jamDatang:"",jamPulang:ab?ab.jamPulang:"",lamaKerja:ab?ab.lamaKerja:"",status:ab?(ab.jamPulang?"pulang":"kerja"):"belum"};});
+    list.sort((a,b)=>({kerja:0,pulang:1,belum:2}[a.status]-{kerja:0,pulang:1,belum:2}[b.status]));
+    if(!list.length){ wrap.innerHTML='<div style="text-align:center;color:#aaa;font-size:12px;padding:10px">Belum ada karyawan terdaftar</div>'; return; }
+    let html="";
+    list.forEach(l=>{
+      const label=l.status==="kerja"?("🟢 "+durasiBerjalan(l.jamDatang)):l.status==="pulang"?("🏁 "+(l.lamaKerja||"")):"❌ Belum";
+      html+=`<div class="tim-row"><div><div class="tim-nama">${l.nama}</div><div class="tim-bagian">${l.bagian||"—"}</div></div><span class="tim-status ${l.status==='kerja'?'kerja':l.status==='pulang'?'pulang':'belum'}">${label}</span></div>`;
+    });
+    wrap.innerHTML=html;
+  }catch(e){ wrap.innerHTML='<div style="text-align:center;color:#E24B4A;font-size:12px;padding:10px">Gagal memuat data tim</div>'; }
+}
 
 // ---- admin lokasi ----
 function bukaAdmin(){
@@ -429,7 +474,7 @@ function bukaAdmin(){
 async function cekPw(){
   const pw=document.getElementById("inp-pw").value;
   try{
-    const d=await jsonp(API_URL+"?action=verifAdminLokasi&sheetId="+lokasi.SheetID+"&pw="+encodeURIComponent(pw));
+    const d=await jsonp(SCRIPT_URL+"?action=verifAdminLokasi&sheetId="+lokasi.SheetID+"&pw="+encodeURIComponent(pw));
     if(d.status==="ok"){
       adminNamaLokasi=d.namaLokasi;
       tutupModal("modal-pw");
@@ -457,20 +502,21 @@ function switchTab(name){["monitor","karyawan","info","setting"].forEach((n,i)=>
 // ---- karyawan CRUD (server-backed, per sheetId) ----
 async function loadKaryawan(){
   document.getElementById("tbl-wrap").innerHTML='<div class="empty">⏳ Memuat...</div>';
-  try{const d=await jsonp(API_URL+"?action=listKaryawan&sheetId="+lokasi.SheetID);karyawan=d.data||[];renderTabel();}
+  try{const d=await jsonp(SCRIPT_URL+"?action=listKaryawan&sheetId="+lokasi.SheetID);karyawan=d.data||[];renderTabel();}
   catch(e){document.getElementById("tbl-wrap").innerHTML='<div class="empty">❌ Gagal memuat</div>';}
 }
 async function tambah(){
   const nama=document.getElementById("inp-nama").value.trim(),email=document.getElementById("inp-email").value.trim().toLowerCase(),bagian=document.getElementById("inp-bagian").value.trim();
+  const akses=document.getElementById("inp-akses").checked?"1":"0";
   if(!nama){showAlert("a-form","Nama tidak boleh kosong","error");return;}
   if(!email||!email.includes("@")){showAlert("a-form","Email tidak valid","error");return;}
   try{
-    const d=await jsonp(API_URL+"?action=addKaryawan&sheetId="+lokasi.SheetID+"&nama="+encodeURIComponent(nama)+"&email="+encodeURIComponent(email)+"&bagian="+encodeURIComponent(bagian));
+    const d=await jsonp(SCRIPT_URL+"?action=addKaryawan&sheetId="+lokasi.SheetID+"&nama="+encodeURIComponent(nama)+"&email="+encodeURIComponent(email)+"&bagian="+encodeURIComponent(bagian)+"&aksesMonitor="+akses);
     if(d.status==="ok"){resetForm();showAlert("a-form","✅ "+nama+" berhasil ditambahkan","success");loadKaryawan();}
     else showAlert("a-form",d.message||"Gagal menambahkan","error");
   }catch(e){showAlert("a-form","Gagal terhubung ke server","error");}
 }
-function resetForm(){["inp-nama","inp-email","inp-bagian"].forEach(id=>document.getElementById(id).value="");}
+function resetForm(){["inp-nama","inp-email","inp-bagian"].forEach(id=>document.getElementById(id).value="");document.getElementById("inp-akses").checked=false;}
 function renderTabel(){
   const cari=(document.getElementById("cari-k")||{value:""}).value.toLowerCase();
   const f=karyawan.filter(k=>(k.Nama||"").toLowerCase().includes(cari)||(k.Email||"").includes(cari)||(k.Bagian||"").toLowerCase().includes(cari));
@@ -478,27 +524,29 @@ function renderTabel(){
   const wrap=document.getElementById("tbl-wrap");
   if(!karyawan.length){wrap.innerHTML='<div class="empty">Belum ada karyawan</div>';return;}
   if(!f.length){wrap.innerHTML='<div class="empty">Tidak ditemukan</div>';return;}
-  let html='<table><thead><tr><th>#</th><th>Nama</th><th>Email</th><th>Bagian</th><th>Aksi</th></tr></thead><tbody>';
-  f.forEach((k,i)=>{html+=`<tr><td style="color:#aaa">${i+1}</td><td><strong>${k.Nama}</strong></td><td style="font-size:11px">${k.Email||"—"}</td><td><span class="bchip">${k.Bagian||"—"}</span></td><td><div style="display:flex;gap:4px"><button class="abtn edit" onclick="bukaEdit('${k.Email}')">✏️</button><button class="abtn del" onclick="hapus('${k.Email}')">🗑️</button></div></td></tr>`;});
+  let html='<table><thead><tr><th>#</th><th>Nama</th><th>Email</th><th>Bagian</th><th>👥</th><th>Aksi</th></tr></thead><tbody>';
+  f.forEach((k,i)=>{const akses=String(k.AksesMonitor).toUpperCase()==="TRUE";html+=`<tr><td style="color:#aaa">${i+1}</td><td><strong>${k.Nama}</strong></td><td style="font-size:11px">${k.Email||"—"}</td><td><span class="bchip">${k.Bagian||"—"}</span></td><td>${akses?'<span title="Boleh lihat status tim">✅</span>':'<span style="color:#ddd">—</span>'}</td><td><div style="display:flex;gap:4px"><button class="abtn edit" onclick="bukaEdit('${k.Email}')">✏️</button><button class="abtn del" onclick="hapus('${k.Email}')">🗑️</button></div></td></tr>`;});
   wrap.innerHTML=html+'</tbody></table>';
 }
 async function hapus(email){
   if(!confirm("Hapus karyawan ini?"))return;
-  try{await jsonp(API_URL+"?action=deleteKaryawan&sheetId="+lokasi.SheetID+"&email="+encodeURIComponent(email));loadKaryawan();}catch(e){alert("Gagal menghapus");}
+  try{await jsonp(SCRIPT_URL+"?action=deleteKaryawan&sheetId="+lokasi.SheetID+"&email="+encodeURIComponent(email));loadKaryawan();}catch(e){alert("Gagal menghapus");}
 }
 function bukaEdit(email){
   const k=karyawan.find(x=>x.Email===email);if(!k)return;
   document.getElementById("edit-nama").value=k.Nama;
   document.getElementById("edit-email").value=k.Email;
   document.getElementById("edit-bagian").value=k.Bagian||"";
+  document.getElementById("edit-akses").checked=String(k.AksesMonitor).toUpperCase()==="TRUE";
   document.getElementById("edit-oldemail").value=k.Email;
   document.getElementById("modal-edit").classList.add("show");
 }
 async function simpanEdit(){
   const oldEmail=document.getElementById("edit-oldemail").value,nama=document.getElementById("edit-nama").value.trim(),email=document.getElementById("edit-email").value.trim().toLowerCase(),bagian=document.getElementById("edit-bagian").value.trim();
+  const akses=document.getElementById("edit-akses").checked?"1":"0";
   if(!nama||!email){alert("Data tidak boleh kosong");return;}
   try{
-    const d=await jsonp(API_URL+"?action=editKaryawan&sheetId="+lokasi.SheetID+"&oldEmail="+encodeURIComponent(oldEmail)+"&nama="+encodeURIComponent(nama)+"&email="+encodeURIComponent(email)+"&bagian="+encodeURIComponent(bagian));
+    const d=await jsonp(SCRIPT_URL+"?action=editKaryawan&sheetId="+lokasi.SheetID+"&oldEmail="+encodeURIComponent(oldEmail)+"&nama="+encodeURIComponent(nama)+"&email="+encodeURIComponent(email)+"&bagian="+encodeURIComponent(bagian)+"&aksesMonitor="+akses);
     if(d.status==="ok"){tutupModal("modal-edit");loadKaryawan();}else alert(d.message||"Gagal menyimpan");
   }catch(e){alert("Gagal terhubung ke server");}
 }
@@ -508,8 +556,8 @@ async function loadAbsensi(){
   document.getElementById("mon-wrap").innerHTML='<div class="empty">⏳ Memuat...</div>';
   try{
     const [da,dk]=await Promise.all([
-      jsonp(API_URL+"?action=getAbsensi&sheetId="+lokasi.SheetID),
-      jsonp(API_URL+"?action=listKaryawan&sheetId="+lokasi.SheetID)
+      jsonp(SCRIPT_URL+"?action=getAbsensi&sheetId="+lokasi.SheetID),
+      jsonp(SCRIPT_URL+"?action=listKaryawan&sheetId="+lokasi.SheetID)
     ]);
     absensiData=da.data||[];karyawan=dk.data||[];
     hitungStat();renderMonitor();
@@ -518,11 +566,29 @@ async function loadAbsensi(){
 function hitungStat(){
   const n=jamSekarang();
   const today=n.getDate().toString().padStart(2,"0")+"/"+(n.getMonth()+1).toString().padStart(2,"0")+"/"+n.getFullYear();
-  document.getElementById("s-datang").textContent=absensiData.filter(a=>a.Tanggal===today&&a.JamDatang).length;
+  document.getElementById("s-datang").textContent=absensiData.filter(a=>a.Tanggal===today&&a.JamDatang&&!a.JamPulang).length;
   document.getElementById("s-pulang").textContent=absensiData.filter(a=>a.Tanggal===today&&a.JamPulang).length;
   document.getElementById("s-belum").textContent=Math.max(0,karyawan.length-absensiData.filter(a=>a.Tanggal===today&&a.JamDatang).length);
 }
 function filterM(type,el){filterAktif=type;document.querySelectorAll(".ftab").forEach(t=>t.classList.remove("active"));el.classList.add("active");renderMonitor();}
+
+// Parse teks "dd/MM/yy HH:mm" jadi Date, buat hitung durasi berjalan (live) untuk yang masih bekerja
+function parseWaktuLengkapJS(str){
+  const m=String(str||"").trim().match(/(\d{2})\/(\d{2})\/(\d{2,4})\s+(\d{2}):(\d{2})/);
+  if(!m) return null;
+  let [,dd,mm,yy,hh,mi]=m;
+  const year=yy.length===2?2000+parseInt(yy,10):parseInt(yy,10);
+  return new Date(year,parseInt(mm,10)-1,parseInt(dd,10),parseInt(hh,10),parseInt(mi,10));
+}
+function durasiBerjalan(jamDatangStr){
+  const mulai=parseWaktuLengkapJS(jamDatangStr);
+  if(!mulai) return "—";
+  let menit=(jamSekarang().getTime()-mulai.getTime())/60000;
+  if(menit<0) menit=0;
+  const j=Math.floor(menit/60), m=Math.round(menit%60);
+  return String(j).padStart(2,"0")+":"+String(m).padStart(2,"0");
+}
+
 function renderMonitor(){
   const n=jamSekarang();
   const today=n.getDate().toString().padStart(2,"0")+"/"+(n.getMonth()+1).toString().padStart(2,"0")+"/"+n.getFullYear();
@@ -534,9 +600,16 @@ function renderMonitor(){
   list.sort((a,b)=>({datang:0,pulang:1,belum:2}[a.status]-{datang:0,pulang:1,belum:2}[b.status]));
   if(!list.length){document.getElementById("mon-wrap").innerHTML='<div class="empty">Tidak ada data</div>';return;}
   let html='<table><thead><tr><th>Nama</th><th>Bagian</th><th>Datang</th><th>Pulang</th><th>Lama Kerja</th><th></th></tr></thead><tbody>';
-  list.forEach(l=>{const chip=l.status==="datang"?'<span class="chip datang">✅</span>':l.status==="pulang"?'<span class="chip pulang">🏁</span>':'<span class="chip belum">❌</span>';html+=`<tr><td><strong>${l.nama}</strong><br><span style="font-size:10px;color:#aaa">${l.email}</span></td><td><span class="bchip">${l.bagian||"—"}</span></td><td style="font-size:11px;font-family:monospace">${l.jamDatang||"—"}</td><td style="font-size:11px;font-family:monospace">${l.jamPulang||"—"}</td><td style="font-size:11px">${l.lamaKerja||"—"}</td><td>${chip}</td></tr>`;});
+  list.forEach(l=>{
+    const chip=l.status==="datang"?'<span class="chip datang">🟢 Bekerja</span>':l.status==="pulang"?'<span class="chip pulang">🏁 Pulang</span>':'<span class="chip belum">❌ Belum</span>';
+    const lamaTampil=l.status==="datang"?('<span style="color:#0F6E56;font-weight:600">'+durasiBerjalan(l.jamDatang)+' ⏱</span>'):(l.lamaKerja||"—");
+    html+=`<tr><td><strong>${l.nama}</strong><br><span style="font-size:10px;color:#aaa">${l.email}</span></td><td><span class="bchip">${l.bagian||"—"}</span></td><td style="font-size:11px;font-family:monospace">${l.jamDatang||"—"}</td><td style="font-size:11px;font-family:monospace">${l.jamPulang||"—"}</td><td style="font-size:11px">${lamaTampil}</td><td>${chip}</td></tr>`;
+  });
   document.getElementById("mon-wrap").innerHTML=html+'</tbody></table>';
 }
+
+// Durasi kerja yang sedang berjalan diperbarui tiap 30 detik, tanpa perlu fetch ulang ke server
+setInterval(()=>{ if(document.getElementById("tab-monitor").classList.contains("active")) renderMonitor(); },30000);
 
 // ---- ganti password admin ----
 async function gantiPw(){
@@ -544,7 +617,7 @@ async function gantiPw(){
   if(baru.length<4){showAlert("a-pw","Password baru minimal 4 karakter","error");return;}
   if(baru!==konfirm){showAlert("a-pw","Konfirmasi password tidak cocok","error");return;}
   try{
-    const d=await jsonp(API_URL+"?action=gantiPasswordAdmin&sheetId="+lokasi.SheetID+"&oldPw="+encodeURIComponent(lama)+"&newPw="+encodeURIComponent(baru));
+    const d=await jsonp(SCRIPT_URL+"?action=gantiPasswordAdmin&sheetId="+lokasi.SheetID+"&oldPw="+encodeURIComponent(lama)+"&newPw="+encodeURIComponent(baru));
     if(d.status==="ok"){["pw-lama","pw-baru","pw-konfirm"].forEach(id=>document.getElementById(id).value="");showAlert("a-pw","✅ Password berhasil diganti","success");}
     else showAlert("a-pw",d.message||"Gagal mengganti password","error");
   }catch(e){showAlert("a-pw","Gagal terhubung ke server","error");}
