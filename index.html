@@ -278,7 +278,14 @@ tr:last-child td{border-bottom:none}
       <div class="info-line"><span>Koordinat</span><b id="info-koor">—</b></div>
       <div class="info-line"><span>Radius Absen</span><b id="info-radius">—</b></div>
       <div class="info-line"><span>Status</span><b id="info-status">—</b></div>
-      <div style="font-size:11px;color:#aaa;margin-top:10px">Untuk mengubah titik lokasi atau radius, hubungi super admin.</div>
+    </div>
+    <div class="acard">
+      <div class="acard-title">📌 Ajukan Perbaikan Titik Lokasi</div>
+      <div style="font-size:11px;color:#888;margin-bottom:10px">Kalau titik GPS di atas ternyata salah/kurang akurat, ajukan titik baru dari sini (harus disetujui super admin dulu sebelum berlaku).</div>
+      <button class="abtn" style="background:#F0F7FF;color:#0C447C;width:100%;margin-bottom:8px" onclick="deteksiGPSPerbaikan()">📡 Deteksi Posisi Saya Sekarang</button>
+      <div id="perbaikan-gps-box" style="display:none;border-radius:10px;padding:9px 12px;margin-bottom:8px;font-size:12px;text-align:center"></div>
+      <div class="rowbtn"><button class="abtn primary" id="btn-ajukan-perbaikan" onclick="ajukanPerbaikan()" disabled>Ajukan ke Super Admin</button></div>
+      <div class="aalert" id="a-perbaikan"></div>
     </div>
   </div>
 
@@ -329,6 +336,8 @@ let userLat = null, userLng = null;
 let lokasi = null; // {SheetID, NamaLokasi, Lat, Lng, Radius, Status}
 let karyawan = [], absensiData = [], filterAktif = "all";
 let adminNamaLokasi = "";
+let adminPwSesi = "";
+let gpsPerbaikanLat=null, gpsPerbaikanLng=null;
 
 const HARI=["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
 let timeOffset = 0; // selisih jam server vs jam HP, di-update tiap respons dari server
@@ -481,6 +490,7 @@ async function cekPw(){
     const d=await jsonp(SCRIPT_URL+"?action=verifAdminLokasi&sheetId="+lokasi.SheetID+"&pw="+encodeURIComponent(pw));
     if(d.status==="ok"){
       adminNamaLokasi=d.namaLokasi;
+      adminPwSesi=pw;
       tutupModal("modal-pw");
       document.getElementById("page-absen").style.display="none";
       document.getElementById("page-admin").style.display="block";
@@ -616,6 +626,34 @@ function renderMonitor(){
 setInterval(()=>{ if(document.getElementById("tab-monitor").classList.contains("active")) renderMonitor(); },30000);
 
 // ---- ganti password admin ----
+// ---- ajukan perbaikan titik lokasi ----
+function deteksiGPSPerbaikan(){
+  const box=document.getElementById("perbaikan-gps-box");
+  box.style.display="block"; box.style.background="#FAEEDA"; box.style.color="#854F0B";
+  box.textContent="📡 Mendeteksi posisi...";
+  if(!navigator.geolocation){ box.style.background="#FCEBEB"; box.style.color="#A32D2D"; box.textContent="❌ GPS tidak didukung"; return; }
+  navigator.geolocation.getCurrentPosition(pos=>{
+    gpsPerbaikanLat=pos.coords.latitude; gpsPerbaikanLng=pos.coords.longitude;
+    box.style.background="#E1F5EE"; box.style.color="#085041";
+    box.textContent="✅ Posisi baru: "+gpsPerbaikanLat.toFixed(6)+", "+gpsPerbaikanLng.toFixed(6)+" (~"+Math.round(pos.coords.accuracy)+"m)";
+    document.getElementById("btn-ajukan-perbaikan").disabled=false;
+  },()=>{
+    box.style.background="#FCEBEB"; box.style.color="#A32D2D";
+    box.textContent="❌ Gagal deteksi. Izinkan akses GPS.";
+  },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+}
+async function ajukanPerbaikan(){
+  if(!gpsPerbaikanLat||!gpsPerbaikanLng){ showAlert("a-perbaikan","Deteksi posisi dulu","error"); return; }
+  try{
+    const d=await jsonp(SCRIPT_URL+"?action=ajukanPerbaikanLokasi&sheetId="+lokasi.SheetID+"&pw="+encodeURIComponent(adminPwSesi)+"&lat="+gpsPerbaikanLat+"&lng="+gpsPerbaikanLng);
+    if(d.status==="ok"){
+      showAlert("a-perbaikan","✅ "+d.message,"success");
+      document.getElementById("btn-ajukan-perbaikan").disabled=true;
+      document.getElementById("perbaikan-gps-box").style.display="none";
+    } else showAlert("a-perbaikan",d.message||"Gagal mengajukan","error");
+  }catch(e){ showAlert("a-perbaikan","Gagal terhubung ke server","error"); }
+}
+
 async function gantiPw(){
   const lama=document.getElementById("pw-lama").value,baru=document.getElementById("pw-baru").value,konfirm=document.getElementById("pw-konfirm").value;
   if(baru.length<4){showAlert("a-pw","Password baru minimal 4 karakter","error");return;}
