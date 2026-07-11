@@ -13,6 +13,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:sans-serif;background:#f5f5f5;min-height:100vh;min-height:100dvh}
@@ -155,10 +156,23 @@ tr:last-child td{border-bottom:none}
         <div class="u-bagian" id="u-bagian"></div>
       </div>
       <div id="form-area">
-        <label>Email Kamu</label>
-        <input type="email" id="inp-gmail" placeholder="nama@gmail.com" onkeydown="if(event.key==='Enter')verif()">
-        <div class="hint">Masukkan email yang sudah didaftarkan admin lokasi</div>
-        <button class="btn-verif" onclick="verif()">🔍 Verifikasi Email</button>
+        <label style="text-align:center;display:block;margin-bottom:10px">Masuk pakai akun Google kamu</label>
+        <div id="g_id_onload"
+             data-client_id="416280432321-45f2lo1no4t87inhu3edc4kfcngpu5i1.apps.googleusercontent.com"
+             data-callback="handleGoogleSignIn"
+             data-auto_prompt="false">
+        </div>
+        <div style="display:flex;justify-content:center;margin-bottom:10px">
+          <div class="g_id_signin"
+               data-type="standard"
+               data-size="large"
+               data-theme="outline"
+               data-text="signin_with"
+               data-shape="rectangular"
+               data-logo_alignment="left">
+          </div>
+        </div>
+        <div class="hint" style="text-align:center">Pakai akun Google yang sudah didaftarkan admin lokasi</div>
       </div>
       <div class="btns" id="absen-btns">
         <button class="btn-d" onclick="absen('datang')">✅ Datang</button>
@@ -400,15 +414,25 @@ async function autoRestore(email){
   }catch(e){}
 }
 
-async function verif(){
+// Decode JWT payload dari Google Sign-In (base64url -> JSON), aman untuk baca email
+// karena token ini langsung dari respons resmi Google Identity Services di browser sendiri.
+function decodeJwtPayload(token){
+  const base64Url=token.split(".")[1];
+  const base64=base64Url.replace(/-/g,"+").replace(/_/g,"/");
+  const padded=base64+"=".repeat((4-base64.length%4)%4);
+  return JSON.parse(decodeURIComponent(atob(padded).split("").map(c=>"%"+("00"+c.charCodeAt(0).toString(16)).slice(-2)).join("")));
+}
+function handleGoogleSignIn(response){
+  const payload=decodeJwtPayload(response.credential);
+  verifGoogle(payload.email.toLowerCase());
+}
+async function verifGoogle(email){
   if(!lokasi){showRes("Lokasi belum terverifikasi","err");return;}
-  const email=document.getElementById("inp-gmail").value.trim().toLowerCase();
-  if(!email||!email.includes("@")){showRes("Masukkan email yang valid","err");return;}
   showRes("⏳ Memverifikasi...","warn");
   document.querySelector(".card").classList.add("loading");
   try{const d=await jsonp(SCRIPT_URL+"?action=cek&sheetId="+lokasi.SheetID+"&email="+encodeURIComponent(email));
     if(d.status==="ok"){userEmail=email;userName=d.nama;userBagian=d.bagian;localStorage.setItem("absen_email",email);tampilUser(email,d.nama,d.bagian,d.aksesMonitor);document.getElementById("result").style.display="none";}
-    else showRes("❌ Email tidak terdaftar di lokasi ini.\nHubungi admin lokasi.","err");
+    else showRes("❌ Akun Google ("+email+") tidak terdaftar di lokasi ini.\nHubungi admin lokasi.","err");
   }catch(e){showRes("Gagal terhubung ke server","err");}
   document.querySelector(".card").classList.remove("loading");
 }
@@ -431,8 +455,8 @@ function gantiAkun(){
   document.getElementById("btn-ganti").style.display="none";
   document.getElementById("tim-btn").style.display="none";
   tutupModal("modal-tim");
-  document.getElementById("inp-gmail").value="";
   document.getElementById("result").style.display="none";
+  if(window.google&&google.accounts&&google.accounts.id) google.accounts.id.disableAutoSelect();
 }
 
 async function absen(jenis){
