@@ -1,8 +1,8 @@
 {
-  "name": "Absensi SPPG Bagan",
+  "name": "Absensi Karyawan",
   "short_name": "Absensi",
-  "description": "Sistem Absensi Karyawan SPPG Bagan Wartawan 1",
-  "start_url": "/absensi-sppg/?lokasi=Wartawan%201",
+  "description": "Sistem Absensi Karyawan Multi-Lokasi",
+  "start_url": "/absensi-sppg/",
   "scope": "/absensi-sppg/",
   "display": "standalone",
   "background_color": "#1D9E75",
