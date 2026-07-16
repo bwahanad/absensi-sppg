@@ -132,9 +132,15 @@ tr:last-child td{border-bottom:none}
 
 <div class="install-banner" id="install-banner">
   <div class="ib-icon">✋</div>
-  <div class="ib-text"><strong>Install Aplikasi Absensi</strong><span>Tambahkan ke layar utama HP kamu</span></div>
-  <button class="ib-btn" onclick="installPWA()">Install</button>
+  <div class="ib-text"><strong id="ib-title">Install Aplikasi Absensi</strong><span id="ib-desc">Tambahkan ke layar utama HP kamu</span></div>
+  <button class="ib-btn" id="ib-btn" onclick="installPWA()">Install</button>
   <button class="ib-close" onclick="closeBanner()">✕</button>
+</div>
+
+<div class="install-banner" id="webview-banner" style="background:linear-gradient(135deg,#D4860A,#A3620A)">
+  <div class="ib-icon">⚠️</div>
+  <div class="ib-text"><strong>Buka lewat Safari/Chrome</strong><span>Login Google tidak bisa lewat browser dalam-aplikasi ini. Tap ⋮ atau ⋯ lalu pilih "Buka di Safari/Browser"</span></div>
+  <button class="ib-close" onclick="document.getElementById('webview-banner').classList.remove('show')">✕</button>
 </div>
 
 <!-- HALAMAN ABSENSI -->
@@ -332,6 +338,22 @@ function jsonp(url){
   });
 }
 
+// ---- deteksi platform: iOS Safari tidak punya beforeinstallprompt, dan beberapa
+// browser dalam-aplikasi (Facebook/Instagram/dll) memblokir Google Sign-In ----
+function isIOS(){
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPad mode desktop
+}
+function isStandalone(){
+  return window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+}
+function isInAppBrowser(){
+  return /FBAN|FBAV|Instagram|Line\/|MicroMessenger|TikTok/i.test(navigator.userAgent);
+}
+if (isInAppBrowser()) {
+  document.getElementById('webview-banner').classList.add('show');
+}
+
 let deferredPrompt = null;
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
@@ -341,7 +363,23 @@ window.addEventListener('beforeinstallprompt', e => {
   if (!localStorage.getItem('pwa_installed')) setTimeout(() => document.getElementById('install-banner').classList.add('show'), 2000);
 });
 window.addEventListener('appinstalled', () => { localStorage.setItem('pwa_installed','1'); document.getElementById('install-banner').classList.remove('show'); deferredPrompt=null; });
-function installPWA(){ if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(r=>{if(r.outcome==='accepted')localStorage.setItem('pwa_installed','1');document.getElementById('install-banner').classList.remove('show');deferredPrompt=null;});} else {alert('Tap menu ⋮ di Chrome → "Tambahkan ke layar utama"');closeBanner();} }
+
+if (isIOS() && !isStandalone() && !localStorage.getItem('pwa_installed') && !isInAppBrowser()) {
+  document.getElementById('ib-title').textContent = 'Tambahkan ke Layar Utama';
+  document.getElementById('ib-desc').textContent = 'Tap tombol Bagikan di bawah, lalu "Add to Home Screen"';
+  document.getElementById('ib-btn').textContent = 'Panduan';
+  setTimeout(() => document.getElementById('install-banner').classList.add('show'), 2000);
+}
+
+function installPWA(){
+  if (isIOS()) {
+    alert('Cara install di iPhone/iPad:\n\n1. Tap ikon Bagikan (kotak dengan panah ke atas) di bar bawah Safari\n2. Scroll dan pilih "Add to Home Screen" / "Tambah ke Layar Utama"\n3. Tap "Add" / "Tambah"\n\nSetelah itu ikon aplikasi akan muncul di layar utama HP kamu.');
+    closeBanner();
+    return;
+  }
+  if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(r=>{if(r.outcome==='accepted')localStorage.setItem('pwa_installed','1');document.getElementById('install-banner').classList.remove('show');deferredPrompt=null;});}
+  else {alert('Tap menu ⋮ di Chrome → "Tambahkan ke layar utama"');closeBanner();}
+}
 function closeBanner(){ document.getElementById('install-banner').classList.remove('show'); }
 
 let userEmail = localStorage.getItem("absen_email") || "";
